@@ -1,0 +1,24 @@
+{
+  "docs": [
+    {
+      "id": "rbk-001",
+      "title": "Tomcat 500 without stacktrace",
+      "text": "If Tomcat returns 500 but no stacktrace, check upstream proxy timeouts, JVM OOM events, and access logs. Verify app context health, thread pool exhaustion, and DB connection pool saturation. Compare recent deployments and config changes."
+    },
+    {
+      "id": "rbk-002",
+      "title": "EKS service intermittent 5xx",
+      "text": "For intermittent 5xx in EKS services, check NLB/ALB target health, pod restarts, HPA scaling events, readiness probes, and network policies. Inspect ingress/controller logs."
+    },
+    {
+      "id": "rbk-003",
+      "title": "Lambda timeout patterns",
+      "text": "Lambda timeouts can be caused by cold starts, VPC ENI attach delays, downstream API latency, or retries. Review duration, initDuration, throttles, and dependency health."
+    },
+    {
+      "id": "inc-024",
+      "title": "DB pool saturation",
+      "text": "Symptoms: spike in latency + 500 errors, while application logs show minimal errors. Root cause often connection pool exhaustion. Validate max pool size, DB CPU, and slow queries."
+    }
+  ]
+}
