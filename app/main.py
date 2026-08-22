@@ -1,6 +1,10 @@
 from fastapi import FastAPI
+from datetime import datetime
+from typing import List, Dict, Any, Literal
+
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+
+from .alert_noise import reduce_alert_noise
 from .retriever import SimpleTfidfRetriever
 
 app = FastAPI(title="RAG Incident Assistant (Simple)", version="1.0")
@@ -13,6 +17,21 @@ class IngestReq(BaseModel):
 class AskReq(BaseModel):
     question: str = Field(..., min_length=3)
     top_k: int = 3
+
+
+class AlertEvent(BaseModel):
+    alert_id: str
+    service: str = Field(..., min_length=1)
+    alert_name: str = Field(..., min_length=1)
+    severity: Literal["info", "warning", "critical"]
+    timestamp: datetime
+    message: str = ""
+
+
+class AlertReductionReq(BaseModel):
+    alerts: List[AlertEvent]
+    cooldown_minutes: int = Field(default=15, ge=0, le=1440)
+    minimum_severity: Literal["info", "warning", "critical"] = "warning"
 
 @app.post("/ingest")
 def ingest(req: IngestReq):
@@ -35,3 +54,13 @@ def ask(req: AskReq):
         "evidence": evidence
     }
     return answer
+
+
+@app.post("/reduce-alert-noise")
+def reduce_noise(req: AlertReductionReq):
+    """Return actionable alerts after severity filtering and cooldown deduplication."""
+    return reduce_alert_noise(
+        (alert.model_dump(mode="json") for alert in req.alerts),
+        cooldown_minutes=req.cooldown_minutes,
+        minimum_severity=req.minimum_severity,
+    )
