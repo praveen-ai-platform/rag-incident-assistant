@@ -5,7 +5,8 @@ import logging
 import os
 import time
 import uuid
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, Security
+from fastapi.security import APIKeyHeader
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -44,8 +45,10 @@ def configure(app):
         raise RuntimeError('Production requires API_KEY with at least 32 characters')
     app.add_middleware(BodyLimitMiddleware)
 
-    async def authenticate(request: Request):
-        if api_key and not hmac.compare_digest(request.headers.get('X-API-Key', '').encode('utf-8'), api_key.encode('utf-8')):
+    key_header = APIKeyHeader(name='X-API-Key', auto_error=False)
+
+    async def authenticate(supplied_key: str | None = Security(key_header)):
+        if api_key and not hmac.compare_digest((supplied_key or '').encode('utf-8'), api_key.encode('utf-8')):
             raise HTTPException(status_code=401, detail='Invalid or missing API key')
 
     @app.exception_handler(RequestValidationError)

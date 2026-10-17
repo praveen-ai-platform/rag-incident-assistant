@@ -82,3 +82,7 @@ class RagTests(unittest.TestCase):
         result=self.client.post('/ask',json={'question':'database','top_k':'private-value'})
         self.assertEqual(result.status_code,422)
         self.assertNotIn('private-value',result.text)
+
+    def test_openapi_documents_api_key(self):
+        schema=self.client.get('/openapi.json').json()
+        self.assertEqual(schema['components']['securitySchemes']['APIKeyHeader']['name'],'X-API-Key')
