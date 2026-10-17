@@ -167,4 +167,3 @@ Do not load employer documents, production logs, credentials, or customer data.
 Offline persistence is plaintext JSON with a single-worker/replica limit. Treat
 model outputs as untrusted text. The server rejects unsupported citations, and
 the UI renders results with `textContent`. No operational actions are executed.
-
