@@ -10,4 +10,4 @@ Commit hashes change because the repository root and parent chain changed.
 | `eb5a9de6d7c55aea75d803b8e19708ec553938bb` | `0c0bbc87974ddc169df9c45eb69c5c99cbfa120a` |
 | `4b054fbd572e8b690e307760a0361803b2ae8e7f` | `ac3b09f6997e61db48895c2efd4608bcea81fa64` |
 
-Public GitHub publication is pending authenticated access.
+Maintained publicly at https://github.com/praveen-ai-platform/rag-incident-assistant.
