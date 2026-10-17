@@ -1,0 +1,36 @@
+{
+  "docs": [
+    {
+      "id": "INC-DEMO-101",
+      "title": "Checkout connection pool saturation",
+      "source_type": "incident",
+      "service": "checkout",
+      "timestamp": "2026-01-14T10:00:00Z",
+      "text": "Synthetic incident: checkout 5xx and latency increased after deployment build 141. Database connection pool reached its limit. Potential cause was a pool-size configuration regression. Resolution in this example: restore the previous pool settings, verify database connections and latency, and review rollback with the incident commander."
+    },
+    {
+      "id": "DEP-DEMO-141",
+      "title": "Jenkins checkout build 141",
+      "source_type": "deployment",
+      "service": "checkout",
+      "timestamp": "2026-01-14T09:50:00Z",
+      "text": "Synthetic Jenkins deployment history: checkout build 141 changed max pool size from 40 to 5. The following incident recorded increased 5xx errors. Compare the deployment diff and runtime configuration before attributing the new incident to the same cause."
+    },
+    {
+      "id": "INC-DEMO-202",
+      "title": "Lambda downstream timeout",
+      "source_type": "incident",
+      "service": "billing",
+      "timestamp": "2026-01-15T08:00:00Z",
+      "text": "Synthetic billing incident: Lambda duration and downstream request latency increased. The example investigation found slow dependency responses. Check dependency latency, throttles, retries, and timeout configuration. Potential resolution: restore dependency health and validate retry limits."
+    },
+    {
+      "id": "DEP-DEMO-205",
+      "title": "Jenkins billing release 205",
+      "source_type": "deployment",
+      "service": "billing",
+      "timestamp": "2026-01-15T07:45:00Z",
+      "text": "Synthetic Jenkins deployment record: billing release 205 adjusted downstream timeout and retry settings. Use release timing as correlation only. Verify live metrics and compare configuration changes before proposing a rollback."
+    }
+  ]
+}

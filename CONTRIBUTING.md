@@ -13,3 +13,8 @@ the complete runtime environment. `requirements-dev.lock` additionally pins the
 HTTP test client where used. Update both lock files when dependencies change,
 run the tests, and audit with `python -m pip_audit -r requirements-dev.lock`.
 The CI workflow does not deploy infrastructure or publish container images.
+
+For AWS-path changes, also run `terraform -chdir=terraform validate` and
+`python scripts/package_lambda.py`. Keep ServiceNow, Jenkins, and Teams described
+as intended integrations unless working adapters and tests are added. Use only
+synthetic fixtures and make live AWS tests opt-in.
