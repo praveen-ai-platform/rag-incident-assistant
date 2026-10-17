@@ -1,9 +1,9 @@
 # Incident investigation architecture
 
-The demo topology follows the supplied architecture reference: Assistant UI,
+The live PoC demonstration followed this AWS topology: Assistant UI,
 API Gateway, Lambda, Amazon Bedrock, S3 source data, Titan embeddings, a Knowledge
-Base with S3 Vectors, Nova generation, and CloudWatch context. It uses synthetic
-records and personal sandbox resources.
+Base with S3 Vectors, Nova generation, and CloudWatch context. It used sample
+incident and deployment records in a personal AWS environment.
 
 ## Demo sequence
 
@@ -99,6 +99,6 @@ No organizational data or integrations are required to demonstrate the UI.
 - The HTTP demo is synchronous. API Gateway may time out before Lambda finishes;
   production event-driven work needs an asynchronous design and delivery retry
   strategy. Those components are intentionally outside this demonstration.
-- Terraform validates resource structure locally; actual regional availability,
-  model access, IAM propagation, ingestion completion, and end-to-end cloud
-  behavior need verification in the user's own sandbox account.
+- The repository's automated checks validate resource configuration and mocked
+  AWS interactions. Account-specific deployment details are documented separately
+  from the live PoC overview.

@@ -1,12 +1,19 @@
 # RAG Incident Assistant (PoC)
 
-A personal proof of concept for investigating incidents using historical incident
-and deployment knowledge. The AWS demo architecture connects **API Gateway,
-Lambda, Amazon Bedrock Knowledge Bases, Titan embeddings, Amazon S3 Vectors,
-Amazon Nova, and optional CloudWatch context**. A small UI and synthetic JSON
-records demonstrate the incident-investigation experience.
+A personal proof of concept demonstrated live on AWS to explore how historical
+incident knowledge and deployment history can support incident investigation.
+The demonstration used a UI and sample JSON records, with API Gateway, Lambda,
+Amazon Bedrock, Titan embeddings, Amazon S3 Vectors, and Amazon Nova forming the
+retrieval and response-generation workflow.
 
-## Demo architecture
+## Project objective
+
+Help an operations responder investigate an incident by bringing together
+relevant historical context and available monitoring signals. The assistant
+presents a potential root cause, a potential resolution, and supporting evidence
+for the responder to review.
+
+## Demonstrated architecture
 
 ```mermaid
 flowchart LR
@@ -27,216 +34,81 @@ flowchart LR
     API --> UI
 ```
 
-The Knowledge Base manages chunking, Titan embedding generation, and the vector
-index. Lambda calls Bedrock `Retrieve`, optionally collects configured CloudWatch
-signals, and calls Nova through `Converse`. This keeps retrieval evidence and live
-context available in one generation request.
+## How the solution works
 
-**JSON records are source data.** The seed script converts them into S3 text
-objects with metadata sidecars. Bedrock generates embeddings and stores the
-vectors in S3 Vectors. Raw JSON files are not inserted directly into a vector
-index. The bundled incident and deployment records are synthetic.
+1. **Historical knowledge:** Sample JSON records represent past incidents and
+   Jenkins deployment history. These records provide the demonstration's source
+   material.
+2. **Source storage:** The records are prepared as documents and metadata in S3.
+3. **Embedding and indexing:** Amazon Bedrock Knowledge Bases chunks the source
+   documents, generates embeddings using Amazon Titan, and stores the vectors
+   in Amazon S3 Vectors.
+4. **Incident submission:** The UI submits an incident description through API
+   Gateway to a Python Lambda function.
+5. **Semantic retrieval:** The Knowledge Base retrieves relevant incident and
+   deployment evidence from the vector index.
+6. **Monitoring context:** Configured CloudWatch logs and metrics can supplement
+   the historical evidence with recent operational signals.
+7. **Response generation:** Amazon Nova analyzes the incident and retrieved
+   context to propose a potential root cause, resolution, and verification steps.
+   The response is presented through the UI with supporting source references.
 
-## Intended operational workflow
+S3 stores the source documents; S3 Vectors stores their embeddings and retrieval
+metadata. The JSON records serve as the source material for this process.
 
-The broader idea is: a new ServiceNow incident initiates an investigation, past
-incidents and Jenkins deployment records provide historical context, CloudWatch
-provides live signals, and the resulting potential root cause and resolution are
-shared with the operations team's Microsoft Teams channel.
+## Demonstration scope
 
-**The demo is scoped to the AWS architecture above.** ServiceNow event delivery,
-automated Jenkins history collection, and Teams channel publishing are intended
-integrations and are not connected by this repository. The demo uses synthetic
-JSON records to represent the historical inputs. No notification or remediation
-is performed automatically.
+The live PoC focused on the AWS architecture and the investigation experience
+using sample incident and deployment records. It demonstrated how retrieval and
+LLM-generated analysis can work together to support a responder's investigation.
 
-See [Architecture and workflow](docs/architecture.md) for the demo boundaries,
-sequence, intended integration points, and security considerations.
+Generated findings are potential explanations to verify. A similar past incident
+or a recent deployment can inform an investigation without proving the cause of
+a new incident.
 
-## What the PoC implements
+## Broader operational idea
 
-- An incident-investigation UI and FastAPI development server.
-- An IAM-protected API Gateway HTTP API and native Python Lambda entry point.
-- Bedrock Knowledge Base retrieval backed by S3 Vectors and Titan embeddings.
-- Nova generation of a **potential root cause**, **potential resolution**, and
-  **verification steps**, with references to retrieved evidence.
-- Optional read-only context from configured CloudWatch log groups and a metric.
-- Synthetic S3 source ingestion and a managed Knowledge Base ingestion job.
-- Terraform configuration for the AWS demo resources and scoped execution roles.
-- An offline retrieval mode for trying the UI without AWS access or model calls.
+The intended end-to-end workflow extends the demonstrated architecture:
 
-These are hypotheses for a responder to verify, not confirmed root-cause
-findings. Similar historical incidents and recent deployments provide evidence;
-temporal proximity alone does not establish causation.
+- A new **ServiceNow** incident triggers the investigation.
+- Historical incidents and **Jenkins** deployment records populate the knowledge
+  source through automated collection.
+- **CloudWatch** supplies relevant live logs and metrics.
+- The assistant shares its findings with the operations team's **Microsoft Teams**
+  channel.
 
-## Try the UI without AWS
+ServiceNow triggering, automated Jenkins collection, and Teams publishing are
+intended integrations. The demonstrated PoC used the supplied AWS architecture
+and sample records to represent the historical inputs.
 
-Use Python 3.14:
+## Technology stack
 
-```sh
-python -m venv .venv
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
-python -m pip install -r requirements-dev.lock
-uvicorn app.main:app --reload --no-access-log
-```
-
-Open http://127.0.0.1:8000, select **Load synthetic example history**, and investigate
-a checkout or billing incident. API documentation is at `/docs`.
-
-`RAG_BACKEND=demo` is the default. It uses local TF-IDF retrieval and returns
-sample evidence extracts; it does not simulate a real model response. The UI
-labels this mode. The original four-runbook fixture remains in `sample_docs.json`
-for the lexical retrieval evaluation script.
-
-## Use the AWS architecture
-
-Use your own sandbox account and a region supporting the selected Bedrock models,
-Knowledge Bases, and S3 Vectors. Model access, IAM permissions, quotas, and regional
-availability must be configured in that account. AWS usage incurs charges.
-
-1. Build the Linux-compatible Lambda package:
-
-   ```sh
-   python scripts/package_lambda.py
-   ```
-
-2. Initialize and validate Terraform, then review the plan:
-
-   ```sh
-   terraform -chdir=terraform init
-   terraform -chdir=terraform validate
-   terraform -chdir=terraform plan
-   ```
-
-   Apply a reviewed plan yourself when ready. CI never deploys AWS resources.
-   Terraform creates the S3 source bucket, S3 vector bucket/index, Knowledge Base,
-   source connector, Lambda, IAM roles, and IAM-authorized API Gateway routes.
-   Data resources are not configured for forced deletion. The native Lambda uses
-   Python 3.13 and excludes the UI/scikit-learn dependencies from its ZIP.
-
-3. Set environment variables from the Terraform outputs:
-
-   ```text
-   AWS_REGION=us-east-1
-   BEDROCK_KNOWLEDGE_BASE_ID=<knowledge_base_id>
-   BEDROCK_DATA_SOURCE_ID=<data_source_id>
-   RAG_SOURCE_BUCKET=<source_bucket>
-   BEDROCK_GENERATION_MODEL_ID=amazon.nova-lite-v1:0
-   ```
-
-   `.env.example` lists settings but is not automatically loaded. Set variables
-   in your shell or deployment configuration; do not commit credentials.
-
-4. Upload the synthetic incident and deployment records and start indexing:
-
-   ```sh
-   python scripts/seed_knowledge_base.py
-   ```
-
-   Check the returned job ID in Bedrock and wait for `COMPLETE` before querying.
-   Ingestion upserts records by stable IDs; it does not erase unrelated history.
-   Upload permissions and `bedrock:StartIngestionJob` belong to the separate seeding
-   identity; the query Lambda has no ingestion permissions.
-
-5. Set `RAG_BACKEND=aws` and launch the UI server again to query the real Bedrock
-   backend using your local AWS identity. Alternatively call the deployed API
-   Gateway endpoint with AWS Signature Version 4 authentication:
-
-   ```sh
-   python scripts/invoke_gateway.py https://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/ask "Checkout 5xx errors after a deployment"
-   ```
-
-   The local UI sends requests to its FastAPI backend. The cloud API uses Lambda;
-   it does not host the UI assets. A directly hosted browser UI would need an
-   authenticated SigV4-capable client or another reviewed authorization layer.
-
-## Configuration
-
-| Variable | Purpose |
+| Component | Role |
 |---|---|
-| `RAG_BACKEND` | `demo` for local extracts; `aws` for Knowledge Base + Nova |
-| `API_KEY` | Optional local API protection through `X-API-Key` |
-| `ENVIRONMENT` | Local production mode requires an API key of at least 32 characters |
-| `RAG_DATA_PATH` | Offline JSON document store; defaults to `data/documents.json` |
-| `AWS_REGION` | AWS region; defaults to `us-east-1` |
-| `BEDROCK_KNOWLEDGE_BASE_ID` | Knowledge Base configured with Titan and S3 Vectors |
-| `BEDROCK_GENERATION_MODEL_ID` | Nova model ID; defaults to `amazon.nova-lite-v1:0` |
-| `RAG_SOURCE_BUCKET` | S3 source bucket used by the seed script |
-| `BEDROCK_DATA_SOURCE_ID` | S3 data source used by the seed script |
-| `CLOUDWATCH_LOG_GROUPS` | Optional comma-separated allowlist, up to three groups |
-| `CLOUDWATCH_METRIC_NAMESPACE` | Optional metric namespace |
-| `CLOUDWATCH_METRIC_NAME` | Optional metric name |
-| `CLOUDWATCH_METRIC_DIMENSIONS` | JSON list of `Name`/`Value` dimension objects |
+| Python and AWS Lambda | Incident-investigation orchestration |
+| Amazon API Gateway | API entry point |
+| Amazon S3 | Historical source documents and metadata |
+| Amazon Titan Text Embeddings | Semantic representation of historical knowledge |
+| Amazon S3 Vectors | Vector storage and similarity retrieval |
+| Amazon Bedrock Knowledge Bases | Managed ingestion and retrieval |
+| Amazon Nova | Potential root-cause and resolution generation |
+| Amazon CloudWatch | Optional operational logs and metrics |
+| UI | Incident submission and response presentation |
+| Terraform | Infrastructure configuration |
 
-The Terraform model setting expects a regional Nova foundation model. If using a
-cross-region inference profile, update the model ID and IAM policy to permit the
-profile and its destination foundation models.
+## Repository references
 
-## API
+- [Architecture and workflow](docs/architecture.md): diagrams and integration boundaries.
+- [Development reference](docs/development.md): implementation setup and deployment details.
+- `app/demo_records.json`: synthetic incident and deployment source records.
+- `app/aws_backend.py`: Knowledge Base retrieval, CloudWatch context, and Nova generation.
+- `app/lambda_handler.py`: API Gateway request handling.
+- `terraform/`: AWS infrastructure configuration.
 
-| Endpoint | Local FastAPI | API Gateway / Lambda |
-|---|---|---|
-| `GET /` | Demo UI | UI is hosted separately |
-| `GET /health` | Liveness and backend mode | Not exposed |
-| `GET /ready` | Local index readiness, or AWS configuration status | Not exposed |
-| `GET /demo-data` | Synthetic sample records | Not exposed |
-| `POST /ingest` | Offline corpus replacement | Use the seed script for AWS ingestion |
-| `POST /ask` | Investigate incident text | IAM-authorized investigation |
-| `POST /incidents` | Same normalized investigation request | Future event-adapter entry point |
+## Validation
 
-Example investigation request:
-
-```json
-{
-  "question": "Checkout 5xx errors increased after deployment. What should we investigate?",
-  "service": "checkout",
-  "top_k": 3,
-  "min_score": 0.1,
-  "include_live_context": false
-}
-```
-
-`service` is an optional AWS metadata filter. The deployed endpoint accepts this
-normalized request; it is not a native ServiceNow webhook adapter. AWS answers
-include potential causes, potential resolutions, verification steps, cited source
-IDs, evidence excerpts, telemetry context, and missing-context warnings. Weak
-retrieval results return `insufficient_evidence` without invoking Nova.
-
-## Validation and limits
-
-```sh
-python -m unittest discover -s tests -v
-python scripts/evaluate.py
-```
-
-Tests cover offline ranking and persistence, AWS retrieval request contracts,
-generation/citation validation, missing telemetry, S3 ingestion, Lambda
-validation/authentication, and UI endpoints. AWS tests use stubs or mocks; no
-live model invocation or cloud deployment is claimed. `scripts/evaluate.py`
-measures only the offline four-runbook fixture, not semantic retrieval or Nova
-accuracy. CI also audits dependencies, builds the container and Lambda package,
-and validates Terraform.
-
-The synchronous HTTP API has a 30-second integration timeout. Sequential
-retrieval, optional telemetry, and generation may exceed that limit even though
-the Lambda timeout is longer. Keep the PoC context small and measure latency;
-a continuous operational integration should use an asynchronous worker and
-status/callback delivery. There is no production throughput or RCA-accuracy claim.
-
-Input bodies are capped at 1 MiB; questions at 2,000 characters; retrieval at ten
-results. CloudWatch context is limited to the previous 15 minutes, at most three
-log groups, twenty events per group, and one configured metric. Logs and source
-text are sent to Bedrock in AWS mode; use only synthetic or approved sandbox data.
-Do not load employer documents, production logs, credentials, or customer data.
-
-Offline persistence is plaintext JSON with a single-worker/replica limit. Treat
-model outputs as untrusted text. The server rejects unsupported citations, and
-the UI renders results with `textContent`. No operational actions are executed.
-
-## References
-
-- [Bedrock Knowledge Bases with S3 Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-query.html)
-- [Titan Text Embeddings models](https://docs.aws.amazon.com/bedrock/latest/userguide/titan-embedding-models.html)
-- [Bedrock Knowledge Base permissions](https://docs.aws.amazon.com/bedrock/latest/userguide/kb-permissions.html)
-- [Amazon Nova model specifications](https://docs.aws.amazon.com/nova/latest/userguide/what-is-nova.html)
+The repository includes automated tests for retrieval, generation response
+validation, source citations, ingestion, and request handling. CI checks dependency
+advisories, container and Lambda packaging, and Terraform configuration. These
+checks complement the live PoC demonstration; they do not establish production
+accuracy or throughput.
